@@ -367,7 +367,7 @@ function TodayTaskAdder({ categories, onAdd }){
 }
 
 // ===================== GOALS =====================
-function GoalAdder({ onAdd }){
+function GoalAdder({ onAdd, disabled=false, limit=3, count=0 }){
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [inc, setInc] = useState(5);
@@ -379,8 +379,14 @@ function GoalAdder({ onAdd }){
   };
   if(!open) return (
     <div className="flex justify-between items-center py-2">
-      <button onClick={()=>setOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 hover:bg-stone-700"><Target className="h-4 w-4"/> Новая цель</button>
-      <span className="text-xs text-stone-500">Добавь измеримую цель</span>
+      <button
+        onClick={()=>{ if(!disabled) setOpen(true); }}
+        disabled={disabled}
+        className={`inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-stone-700 ${disabled? 'bg-stone-900 text-stone-600 cursor-not-allowed' : 'bg-stone-800 text-stone-200 hover:bg-stone-700'}`}
+      >
+        <Target className="h-4 w-4"/> Новая цель
+      </button>
+      <span className="text-xs text-stone-500">{disabled ? `Лимит ${limit} целей достигнут` : `Добавь измеримую цель (${count}/${limit})`}</span>
     </div>
   );
   return (
@@ -527,7 +533,14 @@ export default function CovenantApp() {
   const [goals, setGoals] = useState(()=>{ const init={}; defaultBalance.forEach(b=>{ init[b.title]=[]; }); return init; });
 
   const addTask = (cat, payload) => {
-    const t = payload.text.trim(); if(!t) return; const newTask={ id:makeId(), text:t, done:false, difficulty:payload.difficulty, due: payload.due, recur: payload.recur || 'none' };
+    const t = payload.text.trim();
+    if(!t) return;
+    let parsedDue;
+    if(payload.due){
+      const dateCandidate = new Date(payload.due);
+      parsedDue = isNaN(dateCandidate.getTime()) ? undefined : dateCandidate.toISOString();
+    }
+    const newTask={ id:makeId(), text:t, done:false, difficulty:payload.difficulty, due: parsedDue, recur: payload.recur || 'none' };
     setTasks(prev=>({ ...prev, [cat]: [...(prev[cat]||[]), newTask] }));
   };
 
@@ -546,7 +559,13 @@ export default function CovenantApp() {
     setTasks(prev=>({ ...prev, [cat]: (prev[cat]||[]).filter(it=> it.id!==id ) }));
   };
 
-  const addGoal = (cat, payload)=>{ setGoals(prev=> ({...prev, [cat]: [...(prev[cat]||[]), payload] })); };
+  const addGoal = (cat, payload)=>{
+    setGoals(prev=>{
+      const current = prev[cat] || [];
+      if(current.length >= 3) return prev;
+      return ({...prev, [cat]: [...current, payload] });
+    });
+  };
 
   const toggleGoal = (cat, id) => {
     setGoals(prev=> ({
@@ -776,6 +795,7 @@ export default function CovenantApp() {
             <h2 className="text-lg text-amber-400 mb-3">Задачи на сегодня</h2>
             <Card>
               <CardContent className="pt-4 space-y-4">
+                <TodayTaskAdder categories={balance.map(b=>b.title)} onAdd={addTask} />
                 {/* Упрощённая версия списка — без DnD, чтобы быстрее запустить */}
                 {todayTaskEntries.length===0 && (
                   <div className="text-sm text-stone-500">На сегодня задач не найдено. Добавь их в категориях ниже.</div>
@@ -818,20 +838,61 @@ export default function CovenantApp() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <GoalAdder onAdd={(payload)=>addGoal(area.title, payload)} />
-                    <ul className="mt-3 space-y-2">
-                      {(goals[area.title]||[]).map(goal=> (
-                        <li key={goal.id} className="flex items-center gap-3 p-2 rounded-xl border border-stone-700 bg-stone-900/60">
-                          <input type="checkbox" checked={!!goal.done} onChange={()=>toggleGoal(area.title, goal.id)} className="accent-amber-500 h-4 w-4"/>
-                          <span className={goal.done? 'line-through text-stone-500':'text-stone-200'}>{goal.title}</span>
-                          <span className="ml-auto flex items-center gap-2 text-xs text-stone-400">
-                            <span className="px-2 py-0.5 rounded-full border border-amber-700 text-amber-400">+{goal.increment}</span>
-                            {goal.deadline && <span title="Назначено на">{new Date(goal.deadline).toLocaleString()}</span>}
-                          </span>
-                          <button onClick={()=>removeGoal(area.title, goal.id)} className="text-stone-400 hover:text-amber-400">✕</button>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="space-y-6">
+                      <div>
+                        <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Задачи</div>
+                        <TaskAdder onAdd={(payload)=>addTask(area.title, payload)} />
+                        <ul className="mt-3 space-y-2">
+                          {(tasks[area.title]||[]).length===0 && (
+                            <li className="text-sm text-stone-500">Пока нет задач. Добавь первую.</li>
+                          )}
+                          {(tasks[area.title]||[]).map(task=> (
+                            <li key={task.id} className="p-2 rounded-xl border border-stone-700 bg-stone-900/60 space-y-2">
+                              <div className="flex items-center gap-3">
+                                <input type="checkbox" checked={!!task.done} onChange={()=>toggleTask(area.title, task.id)} className="accent-amber-500 h-4 w-4"/>
+                                <span className={task.done? 'line-through text-stone-500':'text-stone-200'}>{task.text}</span>
+                                {task.due && (
+                                  <span className="ml-auto text-xs text-stone-400" title="Назначено на">{new Date(task.due).toLocaleString()}</span>
+                                )}
+                                <button onClick={()=>removeTask(area.title, task.id)} className="ml-2 text-stone-400 hover:text-amber-400" title="Удалить задачу">
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-stone-400">
+                                <span className={`px-2 py-0.5 rounded-full border ${task.difficulty==='easy'?'border-emerald-700 text-emerald-400': task.difficulty==='medium'?'border-amber-700 text-amber-400':'border-red-700 text-red-400'}`}>
+                                  {task.difficulty==='easy'?'простая': task.difficulty==='medium'?'средняя':'тяжёлая'}
+                                </span>
+                                {task.recur && task.recur!=='none' && (
+                                  <span className="px-2 py-0.5 rounded-full border border-stone-700 text-stone-300">повтор: {RECUR_OPTIONS.find(r=>r.key===task.recur)?.label || task.recur}</span>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Цели</div>
+                        <GoalAdder
+                          onAdd={(payload)=>addGoal(area.title, payload)}
+                          disabled={(goals[area.title]||[]).length >= 3}
+                          limit={3}
+                          count={(goals[area.title]||[]).length}
+                        />
+                        <ul className="mt-3 space-y-2">
+                          {(goals[area.title]||[]).map(goal=> (
+                            <li key={goal.id} className="flex items-center gap-3 p-2 rounded-xl border border-stone-700 bg-stone-900/60">
+                              <input type="checkbox" checked={!!goal.done} onChange={()=>toggleGoal(area.title, goal.id)} className="accent-amber-500 h-4 w-4"/>
+                              <span className={goal.done? 'line-through text-stone-500':'text-stone-200'}>{goal.title}</span>
+                              <span className="ml-auto flex items-center gap-2 text-xs text-stone-400">
+                                <span className="px-2 py-0.5 rounded-full border border-amber-700 text-amber-400">+{goal.increment}</span>
+                                {goal.deadline && <span title="Назначено на">{new Date(goal.deadline).toLocaleString()}</span>}
+                              </span>
+                              <button onClick={()=>removeGoal(area.title, goal.id)} className="text-stone-400 hover:text-amber-400">✕</button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
