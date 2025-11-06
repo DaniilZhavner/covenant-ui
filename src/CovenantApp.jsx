@@ -840,6 +840,28 @@ export default function CovenantApp() {
                   <CardContent>
                     <div className="space-y-6">
                       <div>
+                        <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Цели</div>
+                        <GoalAdder
+                          onAdd={(payload)=>addGoal(area.title, payload)}
+                          disabled={(goals[area.title]||[]).length >= 3}
+                          limit={3}
+                          count={(goals[area.title]||[]).length}
+                        />
+                        <ul className="mt-3 space-y-2">
+                          {(goals[area.title]||[]).map(goal=> (
+                            <li key={goal.id} className="flex items-center gap-3 p-2 rounded-xl border border-stone-700 bg-stone-900/60">
+                              <input type="checkbox" checked={!!goal.done} onChange={()=>toggleGoal(area.title, goal.id)} className="accent-amber-500 h-4 w-4"/>
+                              <span className={goal.done? 'line-through text-stone-500':'text-stone-200'}>{goal.title}</span>
+                              <span className="ml-auto flex items-center gap-2 text-xs text-stone-400">
+                                <span className="px-2 py-0.5 rounded-full border border-amber-700 text-amber-400">+{goal.increment}</span>
+                                {goal.deadline && <span title="Назначено на">{new Date(goal.deadline).toLocaleString()}</span>}
+                              </span>
+                              <button onClick={()=>removeGoal(area.title, goal.id)} className="text-stone-400 hover:text-amber-400">✕</button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
                         <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Задачи</div>
                         <TaskAdder onAdd={(payload)=>addTask(area.title, payload)} />
                         <ul className="mt-3 space-y-2">
@@ -866,28 +888,6 @@ export default function CovenantApp() {
                                   <span className="px-2 py-0.5 rounded-full border border-stone-700 text-stone-300">повтор: {RECUR_OPTIONS.find(r=>r.key===task.recur)?.label || task.recur}</span>
                                 )}
                               </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Цели</div>
-                        <GoalAdder
-                          onAdd={(payload)=>addGoal(area.title, payload)}
-                          disabled={(goals[area.title]||[]).length >= 3}
-                          limit={3}
-                          count={(goals[area.title]||[]).length}
-                        />
-                        <ul className="mt-3 space-y-2">
-                          {(goals[area.title]||[]).map(goal=> (
-                            <li key={goal.id} className="flex items-center gap-3 p-2 rounded-xl border border-stone-700 bg-stone-900/60">
-                              <input type="checkbox" checked={!!goal.done} onChange={()=>toggleGoal(area.title, goal.id)} className="accent-amber-500 h-4 w-4"/>
-                              <span className={goal.done? 'line-through text-stone-500':'text-stone-200'}>{goal.title}</span>
-                              <span className="ml-auto flex items-center gap-2 text-xs text-stone-400">
-                                <span className="px-2 py-0.5 rounded-full border border-amber-700 text-amber-400">+{goal.increment}</span>
-                                {goal.deadline && <span title="Назначено на">{new Date(goal.deadline).toLocaleString()}</span>}
-                              </span>
-                              <button onClick={()=>removeGoal(area.title, goal.id)} className="text-stone-400 hover:text-amber-400">✕</button>
                             </li>
                           ))}
                         </ul>
