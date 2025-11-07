@@ -12,6 +12,7 @@ import {
   User,
   UserPlus,
 } from "lucide-react";
+import { API_BASE } from "../lib/api.js";
 
 const passwordChecks = [
   { id: "length", label: "Не меньше 8 символов", test: (value) => value.length >= 8 },
@@ -122,11 +123,13 @@ export default function AuthLanding({ onAuthenticated }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState(null);
 
   const toggleMode = (nextMode) => {
     setMode(nextMode);
     setErrors({});
     setForm((prev) => ({ ...baseForm, email: prev.email }));
+    setFormError(null);
   };
 
   const handleChange = (event) => {
@@ -141,18 +144,48 @@ export default function AuthLanding({ onAuthenticated }) {
     if (Object.keys(validationErrors).length > 0) return;
 
     setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      if (typeof onAuthenticated === "function") {
-        const payload = {
-          name: mode === "signup" ? form.fullName.trim() || "Новый участник" : form.email.split("@")[0],
-          email: form.email.trim(),
-          mode,
-          remember: form.remember,
+    setFormError(null);
+
+    const endpoint = mode === "signup" ? "/api/auth/register" : "/api/auth/login";
+    const payload =
+      mode === "signup"
+        ? { name: form.fullName.trim() || form.email.split("@")[0], email: form.email.trim(), password: form.password }
+        : { email: form.email.trim(), password: form.password };
+
+    fetch(`${API_BASE}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          let detail = null;
+          try {
+            detail = await response.json();
+          } catch (error) {
+            detail = null;
+          }
+          const message = detail?.error || detail?.message || "Не удалось выполнить запрос";
+          throw new Error(message);
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (typeof onAuthenticated === "function") {
+          onAuthenticated({ user: data.user, token: data.token, remember: form.remember });
+        }
+      })
+      .catch((error) => {
+        const known = {
+          email_taken: "Этот e-mail уже зарегистрирован",
+          invalid_credentials: "Неверный e-mail или пароль",
+          missing_authorization: "Не удалось авторизоваться",
         };
-        onAuthenticated(payload);
-      }
-    }, 500);
+        setFormError(known[error.message] || error.message || "Не удалось выполнить запрос");
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
   };
 
   return (
@@ -326,6 +359,12 @@ export default function AuthLanding({ onAuthenticated }) {
                     Забыли пароль?
                   </button>
                 </div>
+              )}
+
+              {formError && (
+                <p className="rounded-2xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-300">
+                  {formError}
+                </p>
               )}
 
               <motion.button

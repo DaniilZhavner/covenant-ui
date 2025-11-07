@@ -34,6 +34,14 @@ CREATE TABLE IF NOT EXISTS users (
 
 const uid = () => `${Date.now().toString(36)}_${Math.random().toString(36).slice(2,9)}`;
 
+const DEFAULT_BALANCE = [
+  { title: 'Финансы', short: 'Ф', value: 50 },
+  { title: 'Самореализация', short: 'СР', value: 65 },
+  { title: 'Здоровье/тело', short: 'З', value: 70 },
+  { title: 'Социальная жизнь', short: 'С', value: 55 },
+  { title: 'Довольство насыщенностью жизнью', short: 'Д', value: 60 },
+];
+
 // Auth: register
 fastify.post('/api/auth/register', async (req, reply) => {
   const { name, email, password } = req.body || {};
@@ -111,6 +119,17 @@ CREATE TABLE IF NOT EXISTS goals (
 );
 `);
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS balance_segments (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  short TEXT NOT NULL,
+  value INTEGER NOT NULL,
+  position INTEGER NOT NULL
+);
+`);
+
 // helper to parse rows -> iso strings
 function rowToTask(r){
   if(!r) return null;
@@ -119,6 +138,31 @@ function rowToTask(r){
 function rowToGoal(r){
   if(!r) return null;
   return { ...r, deadline: r.deadline? new Date(r.deadline).toISOString(): undefined, done: !!r.done };
+}
+
+function rowToSegment(r){
+  if(!r) return null;
+  return { id: r.id, title: r.title, short: r.short, value: Number(r.value) || 0, position: r.position };
+}
+
+function clampValue(v){
+  const num = Number(v);
+  if (!Number.isFinite(num)) return 0;
+  return Math.max(0, Math.min(100, Math.round(num)));
+}
+
+function ensureBalanceForUser(userId){
+  const rows = db.prepare('SELECT * FROM balance_segments WHERE user_id = ? ORDER BY position ASC').all(userId);
+  if (rows.length > 0) {
+    return rows.map(rowToSegment);
+  }
+  const insert = db.prepare('INSERT INTO balance_segments (id,user_id,title,short,value,position) VALUES (?,?,?,?,?,?)');
+  const created = DEFAULT_BALANCE.map((segment, index) => {
+    const id = uid();
+    insert.run(id, userId, segment.title, segment.short, clampValue(segment.value), index);
+    return { id, title: segment.title, short: segment.short, value: clampValue(segment.value), position: index };
+  });
+  return created;
 }
 
 // list tasks
@@ -151,6 +195,44 @@ fastify.post('/api/tasks/:id/toggle', { preHandler: [fastify.authenticate] }, as
   }
   const updated = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
   return { task: rowToTask(updated) };
+});
+
+fastify.patch('/api/tasks/:id', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+  const id = req.params.id;
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ? AND user_id = ?').get(id, req.user.id);
+  if (!row) return reply.code(404).send({ error: 'not_found' });
+  const allowed = ['text', 'category', 'difficulty', 'due', 'recur', 'done'];
+  const payload = req.body || {};
+  const fields = [];
+  const values = [];
+  allowed.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      if (key === 'due') {
+        const dueValue = payload.due ? new Date(payload.due).getTime() : null;
+        fields.push('due = ?');
+        values.push(Number.isFinite(dueValue) ? dueValue : null);
+      } else if (key === 'done') {
+        fields.push('done = ?');
+        values.push(payload.done ? 1 : 0);
+      } else {
+        fields.push(`${key} = ?`);
+        values.push(payload[key]);
+      }
+    }
+  });
+  if (fields.length === 0) return reply.code(400).send({ error: 'no_updates' });
+  values.push(id);
+  db.prepare(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  const updated = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id);
+  return { task: rowToTask(updated) };
+});
+
+fastify.delete('/api/tasks/:id', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+  const id = req.params.id;
+  const row = db.prepare('SELECT id FROM tasks WHERE id = ? AND user_id = ?').get(id, req.user.id);
+  if (!row) return reply.code(404).send({ error: 'not_found' });
+  db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+  return reply.code(204).send();
 });
 
 function nextIsoFromMillis(ms, recur){
@@ -187,6 +269,68 @@ fastify.post('/api/goals/:id/complete', { preHandler: [fastify.authenticate] }, 
   db.prepare('UPDATE goals SET done = 1 WHERE id = ?').run(id);
   const updated = db.prepare('SELECT * FROM goals WHERE id = ?').get(id);
   return reply.send({ goal: rowToGoal(updated), applied: true, increment: updated.increment });
+});
+
+fastify.post('/api/goals/:id/toggle', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+  const id = req.params.id;
+  const row = db.prepare('SELECT * FROM goals WHERE id = ? AND user_id = ?').get(id, req.user.id);
+  if (!row) return reply.code(404).send({ error: 'not_found' });
+  const nextDone = row.done ? 0 : 1;
+  db.prepare('UPDATE goals SET done = ? WHERE id = ?').run(nextDone, id);
+  const updated = db.prepare('SELECT * FROM goals WHERE id = ?').get(id);
+  return reply.send({ goal: rowToGoal(updated), applied: !!nextDone, increment: updated.increment });
+});
+
+fastify.delete('/api/goals/:id', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+  const id = req.params.id;
+  const row = db.prepare('SELECT id FROM goals WHERE id = ? AND user_id = ?').get(id, req.user.id);
+  if (!row) return reply.code(404).send({ error: 'not_found' });
+  db.prepare('DELETE FROM goals WHERE id = ?').run(id);
+  return reply.code(204).send();
+});
+
+fastify.get('/api/balance', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+  const segments = ensureBalanceForUser(req.user.id);
+  return { segments };
+});
+
+fastify.put('/api/balance', { preHandler: [fastify.authenticate] }, async (req, reply) => {
+  const { segments } = req.body || {};
+  if (!Array.isArray(segments)) return reply.code(400).send({ error: 'segments_required' });
+  const userId = req.user.id;
+  const upsert = db.transaction((items) => {
+    const updateStmt = db.prepare('UPDATE balance_segments SET title = ?, short = ?, value = ?, position = ? WHERE id = ? AND user_id = ?');
+    const insertStmt = db.prepare('INSERT INTO balance_segments (id,user_id,title,short,value,position) VALUES (?,?,?,?,?,?)');
+    const existingIds = new Set(items.map((item) => item && item.id).filter(Boolean));
+    if (existingIds.size > 0) {
+      const ids = Array.from(existingIds);
+      const marks = ids.map(() => '?').join(',');
+      db.prepare(`DELETE FROM balance_segments WHERE user_id = ? AND id NOT IN (${marks})`).run(userId, ...ids);
+    } else {
+      db.prepare('DELETE FROM balance_segments WHERE user_id = ?').run(userId);
+    }
+    items.forEach((item, index) => {
+      if (!item || !item.title || !item.short) return;
+      const value = clampValue(item.value);
+      const position = Number.isFinite(Number(item.position)) ? Number(item.position) : index;
+      if (item.id) {
+        const result = updateStmt.run(item.title, item.short, value, position, item.id, userId);
+        if (result.changes === 0) {
+          insertStmt.run(item.id, userId, item.title, item.short, value, position);
+        }
+      } else {
+        insertStmt.run(uid(), userId, item.title, item.short, value, position);
+      }
+    });
+  });
+  try {
+    upsert(segments);
+  } catch (err) {
+    req.log.error(err);
+    return reply.code(500).send({ error: 'balance_update_failed' });
+  }
+  const rows = db.prepare('SELECT * FROM balance_segments WHERE user_id = ? ORDER BY position ASC').all(userId);
+  return { segments: rows.map(rowToSegment) };
 });
 
 // health
