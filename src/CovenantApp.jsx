@@ -432,6 +432,7 @@ function MobileTodayPage({
 
       <section>
         <h2 className="text-lg text-amber-400 mb-3">Задачи на сегодня</h2>
+        <div className="p-4">
         <div className="rounded-2xl bg-stone-950/40 p-4">
           <TodayTaskAdder categories={categories} onAdd={onAddTodayTask} />
         </div>
