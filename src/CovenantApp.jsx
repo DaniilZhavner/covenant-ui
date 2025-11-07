@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Rocket, Flame, Plus, Trash2, Maximize2, CheckCircle2, Target, X, Home, CalendarCheck, User } from "lucide-react";
+import { Rocket, Flame, Plus, Trash2, Maximize2, CheckCircle2, Target, X, Home, CalendarCheck, User, LogOut } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 
@@ -607,8 +607,10 @@ function GoalAdder({ onAdd, disabled=false, limit=3, count=0 }){
 function isSameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
 function toLocalInput(dt){const d=new Date(dt||Date.now());const pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 
-export default function CovenantApp() {
+export default function CovenantApp({ user, onSignOut }) {
   const [dark, setDark] = useState(true);
+  const userName = user?.name ?? "Участник Ковенанта";
+  const userEmail = user?.email ?? null;
 
   useEffect(() => {
     document.documentElement.style.colorScheme = dark ? "dark" : "light";
@@ -866,9 +868,22 @@ export default function CovenantApp() {
       <motion.header initial={{opacity:0,y:-12}} animate={{opacity:1,y:0}} className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold tracking-wide text-amber-400 drop-shadow">Ковенант</h1>
+          <p className="mt-1 text-xs text-stone-500">
+            {userEmail ? `${userName} · ${userEmail}` : userName}
+          </p>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-stone-400"><span>Тьма</span><Switch checked={dark} onCheckedChange={setDark}/></div>
+          {onSignOut && (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="inline-flex items-center gap-2 rounded-full border border-stone-700/70 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-amber-500/70 hover:text-amber-300"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              Выйти
+            </button>
+          )}
         </div>
       </motion.header>
 
