@@ -500,7 +500,7 @@ function BottomTabBar({ activeTab, onChange }) {
   ];
 
   return (
-    <nav className="fixed bottom-4 left-1/2 z-40 w-[min(420px,calc(100%-2rem))] -translate-x-1/2 rounded-3xl border border-stone-700 bg-black/80 px-4 py-3 shadow-2xl shadow-amber-900/10 backdrop-blur">
+    <nav className="fixed bottom-0 left-1/2 z-40 w-full max-w-[420px] -translate-x-1/2 rounded-t-3xl border border-b-0 border-stone-700 bg-black/85 px-3 py-2 shadow-2xl shadow-amber-900/10 backdrop-blur">
       <div className="flex items-center justify-between">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -511,16 +511,16 @@ function BottomTabBar({ activeTab, onChange }) {
               <button
                 key={tab.key}
                 onClick={() => onChange(tab.key)}
-                className="-mt-10 flex flex-col items-center"
+                className="flex flex-col items-center gap-1"
               >
                 <span
-                  className={`grid h-16 w-16 place-items-center rounded-full border-2 ${
+                  className={`grid h-12 w-12 place-items-center rounded-full border ${
                     isActive ? 'border-amber-400 bg-amber-500 text-black shadow-lg shadow-amber-500/40' : 'border-amber-600 bg-amber-400/90 text-black/90'
                   }`}
                 >
-                  <Icon className="h-6 w-6" />
+                  <Icon className="h-5 w-5" />
                 </span>
-                <span className={`mt-2 text-xs font-semibold ${isActive ? 'text-amber-200' : 'text-stone-400'}`}>
+                <span className={`text-[0.7rem] font-semibold ${isActive ? 'text-amber-200' : 'text-stone-400'}`}>
                   {tab.label}
                 </span>
               </button>
@@ -531,16 +531,16 @@ function BottomTabBar({ activeTab, onChange }) {
             <button
               key={tab.key}
               onClick={() => onChange(tab.key)}
-              className="flex flex-col items-center gap-1 text-xs"
+              className="flex flex-col items-center gap-0.5 text-[0.7rem]"
             >
               <span
-                className={`grid h-10 w-16 place-items-center rounded-2xl border ${
+                className={`grid h-8 w-12 place-items-center rounded-2xl border ${
                   isActive
                     ? 'border-amber-500 bg-stone-800 text-amber-300'
                     : 'border-stone-700 bg-stone-900 text-stone-400'
                 }`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4 w-4" />
               </span>
               <span className={isActive ? 'text-amber-200' : 'text-stone-400'}>{tab.label}</span>
             </button>
