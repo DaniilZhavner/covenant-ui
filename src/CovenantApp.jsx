@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldCheck, Sparkles, Rocket, Flame, Plus, Trash2, Maximize2, CheckCircle2, Target, X } from "lucide-react";
+import { ShieldCheck, Sparkles, Rocket, Flame, Plus, Trash2, Maximize2, CheckCircle2, Target, X, Home, CalendarCheck, User } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 
@@ -366,6 +366,191 @@ function TodayTaskAdder({ categories, onAdd }){
   );
 }
 
+function MobileTodayPage({
+  balance,
+  goals,
+  todayTaskEntries,
+  categories,
+  onAddTodayTask,
+  onToggleGoal,
+  onToggleTask,
+  onRemoveToday,
+  onEditDue,
+}) {
+  return (
+    <div className="space-y-8 pb-32">
+      <section>
+        <h2 className="text-lg text-amber-400 mb-3">Цели по категориям</h2>
+        <div className="-mx-4 px-4 overflow-x-auto">
+          <div className="flex gap-3 pb-2">
+            {balance.map((area) => {
+              const areaGoals = goals[area.title] || [];
+              return (
+                <div
+                  key={area.title}
+                  className="min-w-[240px] flex-shrink-0 rounded-2xl border border-stone-700 bg-stone-900/70 p-4"
+                >
+                  <div className="flex items-center gap-2 text-sm font-semibold text-stone-200">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-stone-800 border border-stone-700 text-amber-400 text-xs">
+                      {area.short}
+                    </span>
+                    {area.title}
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {areaGoals.length === 0 ? (
+                      <p className="text-xs text-stone-500">Целей пока нет.</p>
+                    ) : (
+                      areaGoals.map((goal) => (
+                        <label
+                          key={goal.id}
+                          className="flex items-center gap-2 rounded-xl bg-stone-950/40 px-3 py-2 text-sm"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!goal.done}
+                            onChange={() => onToggleGoal(area.title, goal.id)}
+                            className="accent-amber-500 h-4 w-4"
+                          />
+                          <span className={goal.done ? "line-through text-stone-500" : "text-stone-200"}>
+                            {goal.title}
+                          </span>
+                          <span className="ml-auto text-xs text-amber-400">+{goal.increment}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-lg text-amber-400 mb-3">Задачи на сегодня</h2>
+        <div className="rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
+          <TodayTaskAdder categories={categories} onAdd={onAddTodayTask} />
+        </div>
+        {todayTaskEntries.length === 0 ? (
+          <p className="mt-4 text-sm text-stone-500">На сегодня задач пока нет. Добавь первую.</p>
+        ) : (
+          <ul className="mt-4 space-y-3">
+            {todayTaskEntries.map(({ cat, task }, index) => (
+              <li
+                key={task.id}
+                className="rounded-2xl border border-stone-700 bg-stone-900/70 p-4 space-y-2"
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={!!task.done}
+                    onChange={() => onToggleTask(cat, task.id)}
+                    className="accent-amber-500 h-4 w-4"
+                  />
+                  <span className={task.done ? "line-through text-stone-500" : "text-stone-100"}>{task.text}</span>
+                  <span className="ml-auto text-xs text-stone-400">{cat}</span>
+                  <button
+                    onClick={() => onRemoveToday(index)}
+                    className="ml-2 text-stone-400 hover:text-amber-400"
+                    title="Удалить из Сегодня"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-stone-400">
+                  <span
+                    className={`px-2 py-0.5 rounded-full border ${
+                      task.difficulty === 'easy'
+                        ? 'border-emerald-700 text-emerald-400'
+                        : task.difficulty === 'medium'
+                        ? 'border-amber-700 text-amber-400'
+                        : 'border-red-700 text-red-400'
+                    }`}
+                  >
+                    {task.difficulty === 'easy'
+                      ? 'простая'
+                      : task.difficulty === 'medium'
+                      ? 'средняя'
+                      : 'тяжёлая'}
+                  </span>
+                  {task.due && <span>{new Date(task.due).toLocaleString()}</span>}
+                </div>
+                <div>
+                  <button
+                    onClick={() => onEditDue(index)}
+                    className="text-xs text-stone-400 hover:text-amber-400 underline underline-offset-2"
+                  >
+                    Не сегодня
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function BottomTabBar({ activeTab, onChange }) {
+  const tabs = [
+    { key: 'overview', label: 'Обзор', icon: Home },
+    { key: 'today', label: 'Сегодня', icon: CalendarCheck },
+    { key: 'profile', label: 'Профиль', icon: User },
+  ];
+
+  return (
+    <nav className="fixed bottom-4 left-1/2 z-40 w-[min(420px,calc(100%-2rem))] -translate-x-1/2 rounded-3xl border border-stone-700 bg-black/80 px-4 py-3 shadow-2xl shadow-amber-900/10 backdrop-blur">
+      <div className="flex items-center justify-between">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+
+          if (tab.key === 'today') {
+            return (
+              <button
+                key={tab.key}
+                onClick={() => onChange(tab.key)}
+                className="-mt-10 flex flex-col items-center"
+              >
+                <span
+                  className={`grid h-16 w-16 place-items-center rounded-full border-2 ${
+                    isActive ? 'border-amber-400 bg-amber-500 text-black shadow-lg shadow-amber-500/40' : 'border-amber-600 bg-amber-400/90 text-black/90'
+                  }`}
+                >
+                  <Icon className="h-6 w-6" />
+                </span>
+                <span className={`mt-2 text-xs font-semibold ${isActive ? 'text-amber-200' : 'text-stone-400'}`}>
+                  {tab.label}
+                </span>
+              </button>
+            );
+          }
+
+          return (
+            <button
+              key={tab.key}
+              onClick={() => onChange(tab.key)}
+              className="flex flex-col items-center gap-1 text-xs"
+            >
+              <span
+                className={`grid h-10 w-16 place-items-center rounded-2xl border ${
+                  isActive
+                    ? 'border-amber-500 bg-stone-800 text-amber-300'
+                    : 'border-stone-700 bg-stone-900 text-stone-400'
+                }`}
+              >
+                <Icon className="h-5 w-5" />
+              </span>
+              <span className={isActive ? 'text-amber-200' : 'text-stone-400'}>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}
+
 // ===================== GOALS =====================
 function GoalAdder({ onAdd, disabled=false, limit=3, count=0 }){
   const [open, setOpen] = useState(false);
@@ -420,6 +605,7 @@ export default function CovenantApp() {
   const [dark, setDark] = useState(true);
   const [balance, setBalance] = useState(defaultBalance);
   const [locked, setLocked] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
   // Runtime checks (микро-тесты)
   useEffect(() => {
@@ -666,257 +852,279 @@ export default function CovenantApp() {
         </div>
       </motion.header>
 
-      <main className="max-w-6xl mx-auto px-4 pb-12">
-        {/* Приветствие + колесо */}
-        <Card className="shadow-inner mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl text-amber-400 drop-shadow"><Rocket className="h-5 w-5"/> Добро пожаловать в ковенант</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <InteractiveWheel data={balance} onChange={(i,v)=>{ if(locked) return; const next=[...balance]; next[i]={...next[i], value:v}; setBalance(next); }} locked={locked} />
-            <div className="grid sm:grid-cols-2 gap-4 mt-6">
-              {balance.map((area,i)=> (
-                <div key={i} className="flex items-center gap-3 text-stone-300">
-                  <span className="w-40 text-sm">{area.title}</span>
-                  <input type="range" min={0} max={100} value={area.value} onChange={e=>{ if(locked) return; const next=[...balance]; next[i]={...next[i], value:Number(e.target.value)}; setBalance(next); }} className="flex-1 accent-amber-500" disabled={locked}/>
-                  <span className="text-sm w-8 text-right text-amber-400">{area.value}</span>
-                </div>
-              ))}
-            </div>
-            {!locked && (
-              <div className="mt-6 text-center">
-                <Button onClick={startJourney} className="rounded-2xl bg-amber-600 hover:bg-amber-500 text-black font-semibold px-6 py-2">Начать путешествие</Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Сила Воли */}
-        {showWillpower && (
-          <Card className="shadow-inner mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-2xl text-amber-400 drop-shadow"><Flame className="h-5 w-5"/> Сила Воли</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!showTest ? (
-                <>
-                  {stats && (
-                    <div className="flex flex-wrap items-center justify-center gap-6 text-stone-300 mb-6">
-                      <div className="text-sm">Вчера: <span className="text-amber-400 font-bold">{stats.yesterday}</span>/10</div>
-                      <div className="text-sm">Неделя: <span className="text-amber-400 font-bold">{stats.week}</span>/10</div>
-                      <div className="text-sm">Месяц: <span className="text-amber-400 font-bold">{stats.month}</span>/10</div>
-                      <div className="text-sm">Год: <span className="text-amber-400 font-bold">{stats.year}</span>/10</div>
+      <main className={`max-w-6xl mx-auto px-4 ${activeTab === 'today' ? 'pb-44 pt-6' : 'pb-24'}`}>
+        {activeTab === 'today' ? (
+          <MobileTodayPage
+            balance={balance}
+            goals={goals}
+            todayTaskEntries={todayTaskEntries}
+            categories={balance.map((b) => b.title)}
+            onAddTodayTask={addTask}
+            onToggleGoal={toggleGoal}
+            onToggleTask={toggleTask}
+            onRemoveToday={removeTodayAt}
+            onEditDue={openTodayDue}
+          />
+        ) : activeTab === 'overview' ? (
+          <>
+            {/* Приветствие + колесо */}
+            <Card className="shadow-inner mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-2xl text-amber-400 drop-shadow"><Rocket className="h-5 w-5"/> Добро пожаловать в ковенант</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <InteractiveWheel data={balance} onChange={(i,v)=>{ if(locked) return; const next=[...balance]; next[i]={...next[i], value:v}; setBalance(next); }} locked={locked} />
+                <div className="grid sm:grid-cols-2 gap-4 mt-6">
+                  {balance.map((area,i)=> (
+                    <div key={i} className="flex items-center gap-3 text-stone-300">
+                      <span className="w-40 text-sm">{area.title}</span>
+                      <input type="range" min={0} max={100} value={area.value} onChange={e=>{ if(locked) return; const next=[...balance]; next[i]={...next[i], value:Number(e.target.value)}; setBalance(next); }} className="flex-1 accent-amber-500" disabled={locked}/>
+                      <span className="text-sm w-8 text-right text-amber-400">{area.value}</span>
                     </div>
-                  )}
-                  <div className="relative w-full grid place-items-center">
-                    <CircularMeterButton value={willpower} onClick={() => { setShowTest(true); setTestStep(0); setAnswers([]); }} />
-                  </div>
-                  {willpower!==null && (
-                    <div className="mt-6 p-4 border border-stone-700 rounded-2xl bg-stone-900/60">
-                      <div className="flex items-center gap-2 text-amber-400 font-semibold"><Flame className="h-4 w-4"/> {getAdvice(willpower).title}</div>
-                      <ul className="mt-3 space-y-2 list-disc pl-5 text-stone-200">
-                        {getAdvice(willpower).points.map((p,i)=>(<li key={i}>{p}</li>))}
-                      </ul>
-                      <div className="mt-3 text-sm text-stone-400">{getRecommendation(willpower)}</div>
-                    </div>
-                  )}
-                  <div className="mt-8 space-y-4">
-                    <div className="flex items-center gap-3 justify-center">
-                      <span className="text-stone-300 text-sm">Показать графики</span>
-                      <Button onClick={()=>setShowWeekChart(v=>!v)} className="rounded-full bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700">Неделя</Button>
-                      <Button onClick={()=>setShowMonthChart(v=>!v)} className="rounded-full bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700">Месяц</Button>
-                      <Button onClick={()=>setShowYearChart(v=>!v)} className="rounded-full bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700">Год</Button>
-                    </div>
-                    {showWeekChart && (
-                      <div className="h-56">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={seriesWeek}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#44403c"/>
-                            <XAxis dataKey="name" stroke="#a8a29e"/>
-                            <YAxis domain={[0,10]} stroke="#a8a29e"/>
-                            <Tooltip/>
-                            <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} dot={{r:3}}/>
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                    {showMonthChart && (
-                      <div className="h-56">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={seriesMonth}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#44403c"/>
-                            <XAxis dataKey="name" stroke="#a8a29e"/>
-                            <YAxis domain={[0,10]} stroke="#a8a29e"/>
-                            <Tooltip/>
-                            <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} dot={{r:2}}/>
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                    {showYearChart && (
-                      <div className="h-56">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={seriesYear}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#44403c"/>
-                            <XAxis dataKey="name" stroke="#a8a29e"/>
-                            <YAxis domain={[0,10]} stroke="#a8a29e"/>
-                            <Tooltip/>
-                            <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} dot={{r:4}}/>
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="space-y-6">
-                  <p className="text-stone-300 text-lg text-center">{questions[testStep]}</p>
-                  <div className="flex gap-2 flex-wrap justify-center">
-                    {[0,1,2,3,4,5,6,7,8,9,10].map(val=> (
-                      <Button key={val} onClick={()=>{
-                        const na=[...answers, val]; setAnswers(na);
-                        if(na.length < questions.length){ setTestStep(na.length); }
-                        else { const final=Math.round(na.reduce((a,b)=>a+b,0)/na.length); setWillpower(final);
-                          setStats(prev=> prev? { ...prev, yesterday: final, week: Math.round((prev.week+final)/2), month: Math.round((prev.month+final)/2), year: prev.year } : { yesterday: final, week: final, month: final, year: final });
-                          setShowTest(false);
-                        }
-                      }} className="bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700 w-10 h-10 p-0">{val}</Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Задачи на сегодня */}
-        {showWillpower && (
-          <section className="max-w-6xl mx-auto mt-8">
-            <h2 className="text-lg text-amber-400 mb-3">Задачи на сегодня</h2>
-            <Card>
-              <CardContent className="pt-4 space-y-4">
-                <TodayTaskAdder categories={balance.map(b=>b.title)} onAdd={addTask} />
-                {/* Упрощённая версия списка — без DnD, чтобы быстрее запустить */}
-                {todayTaskEntries.length===0 && (
-                  <div className="text-sm text-stone-500">На сегодня задач не найдено. Добавь их в категориях ниже.</div>
-                )}
-                <ul className="mt-1 space-y-2">
-                  {todayTaskEntries.map(({cat, task}, index)=> (
-                    <li key={task.id} className="flex flex-col gap-1 p-3 rounded-xl border border-stone-700 bg-stone-900/60">
-                      <div className="flex items-center gap-3">
-                        <input type="checkbox" checked={!!task.done} onChange={()=>toggleTask(cat, task.id)} className="accent-amber-500 h-4 w-4"/>
-                        <span className={task.done? 'line-through text-stone-500':'text-stone-200'}>{task.text}</span>
-                        <span className="ml-auto text-xs text-stone-400">{cat}</span>
-                        <button onClick={()=>removeTodayAt(index)} className="ml-2 text-stone-400 hover:text-amber-400" title="Удалить из Сегодня и категории">✕</button>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-stone-400">
-                        <span className={`px-2 py-0.5 rounded-full border ${task.difficulty==='easy'?'border-emerald-700 text-emerald-400': task.difficulty==='medium'?'border-amber-700 text-amber-400':'border-red-700 text-red-400'}`}>{task.difficulty==='easy'?'простая': task.difficulty==='medium'?'средняя':'тяжёлая'}</span>
-                        {task.due && <span>{new Date(task.due).toLocaleString()}</span>}
-                      </div>
-                      <div className="pt-1">
-                        <button onClick={()=>{ setTodayDueEdit({ open:true, index, cat, id:task.id, value: toLocalInput(task.due) }); }} className="text-xs text-stone-400 hover:text-amber-400 underline underline-offset-2">Не сегодня</button>
-                      </div>
-                    </li>
                   ))}
-                </ul>
+                </div>
+                {!locked && (
+                  <div className="mt-6 text-center">
+                    <Button onClick={startJourney} className="rounded-2xl bg-amber-600 hover:bg-amber-500 text-black font-semibold px-6 py-2">Начать путешествие</Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </section>
-        )}
 
-        {/* Цели по категориям (компактный список) */}
-        {showWillpower && (
-          <section className="max-w-6xl mx-auto mt-8">
-            <h2 className="text-lg text-amber-400 mb-3">Цели по категориям</h2>
-            <div className="grid md:grid-cols-2 gap-4">
-              {balance.map(area=> (
-                <Card key={area.title}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base text-stone-200 flex items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-stone-800 border border-stone-700 text-amber-400 text-xs">{area.short}</span>
-                      {area.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      <div>
-                        <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Цели</div>
-                        <GoalAdder
-                          onAdd={(payload)=>addGoal(area.title, payload)}
-                          disabled={(goals[area.title]||[]).length >= 3}
-                          limit={3}
-                          count={(goals[area.title]||[]).length}
-                        />
-                        <ul className="mt-3 space-y-2">
-                          {(goals[area.title]||[]).map(goal=> (
-                            <li key={goal.id} className="flex items-center gap-3 p-2 rounded-xl border border-stone-700 bg-stone-900/60">
-                              <input type="checkbox" checked={!!goal.done} onChange={()=>toggleGoal(area.title, goal.id)} className="accent-amber-500 h-4 w-4"/>
-                              <span className={goal.done? 'line-through text-stone-500':'text-stone-200'}>{goal.title}</span>
-                              <span className="ml-auto flex items-center gap-2 text-xs text-stone-400">
-                                <span className="px-2 py-0.5 rounded-full border border-amber-700 text-amber-400">+{goal.increment}</span>
-                                {goal.deadline && <span title="Назначено на">{new Date(goal.deadline).toLocaleString()}</span>}
-                              </span>
-                              <button onClick={()=>removeGoal(area.title, goal.id)} className="text-stone-400 hover:text-amber-400">✕</button>
-                            </li>
-                          ))}
-                        </ul>
+            {/* Сила Воли */}
+            {showWillpower && (
+              <Card className="shadow-inner mb-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-2xl text-amber-400 drop-shadow"><Flame className="h-5 w-5"/> Сила Воли</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!showTest ? (
+                    <>
+                      {stats && (
+                        <div className="flex flex-wrap items-center justify-center gap-6 text-stone-300 mb-6">
+                          <div className="text-sm">Вчера: <span className="text-amber-400 font-bold">{stats.yesterday}</span>/10</div>
+                          <div className="text-sm">Неделя: <span className="text-amber-400 font-bold">{stats.week}</span>/10</div>
+                          <div className="text-sm">Месяц: <span className="text-amber-400 font-bold">{stats.month}</span>/10</div>
+                          <div className="text-sm">Год: <span className="text-amber-400 font-bold">{stats.year}</span>/10</div>
+                        </div>
+                      )}
+                      <div className="relative w-full grid place-items-center">
+                        <CircularMeterButton value={willpower} onClick={() => { setShowTest(true); setTestStep(0); setAnswers([]); }} />
                       </div>
-                      <div>
-                        <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Задачи</div>
-                        <TaskAdder onAdd={(payload)=>addTask(area.title, payload)} />
-                        <ul className="mt-3 space-y-2">
-                          {(tasks[area.title]||[]).length===0 && (
-                            <li className="text-sm text-stone-500">Пока нет задач. Добавь первую.</li>
-                          )}
-                          {(tasks[area.title]||[]).map(task=> (
-                            <li key={task.id} className="p-2 rounded-xl border border-stone-700 bg-stone-900/60 space-y-2">
-                              <div className="flex items-center gap-3">
-                                <input type="checkbox" checked={!!task.done} onChange={()=>toggleTask(area.title, task.id)} className="accent-amber-500 h-4 w-4"/>
-                                <span className={task.done? 'line-through text-stone-500':'text-stone-200'}>{task.text}</span>
-                                {task.due && (
-                                  <span className="ml-auto text-xs text-stone-400" title="Назначено на">{new Date(task.due).toLocaleString()}</span>
-                                )}
-                                <button onClick={()=>removeTask(area.title, task.id)} className="ml-2 text-stone-400 hover:text-amber-400" title="Удалить задачу">
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-stone-400">
-                                <span className={`px-2 py-0.5 rounded-full border ${task.difficulty==='easy'?'border-emerald-700 text-emerald-400': task.difficulty==='medium'?'border-amber-700 text-amber-400':'border-red-700 text-red-400'}`}>
-                                  {task.difficulty==='easy'?'простая': task.difficulty==='medium'?'средняя':'тяжёлая'}
-                                </span>
-                                {task.recur && task.recur!=='none' && (
-                                  <span className="px-2 py-0.5 rounded-full border border-stone-700 text-stone-300">повтор: {RECUR_OPTIONS.find(r=>r.key===task.recur)?.label || task.recur}</span>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+                      {willpower!==null && (
+                        <div className="mt-6 p-4 border border-stone-700 rounded-2xl bg-stone-900/60">
+                          <div className="flex items-center gap-2 text-amber-400 font-semibold"><Flame className="h-4 w-4"/> {getAdvice(willpower).title}</div>
+                          <ul className="mt-3 space-y-2 list-disc pl-5 text-stone-200">
+                            {getAdvice(willpower).points.map((p,i)=>(<li key={i}>{p}</li>))}
+                          </ul>
+                          <div className="mt-3 text-sm text-stone-400">{getRecommendation(willpower)}</div>
+                        </div>
+                      )}
+                      <div className="mt-8 space-y-4">
+                        <div className="flex items-center gap-3 justify-center">
+                          <span className="text-stone-300 text-sm">Показать графики</span>
+                          <Button onClick={()=>setShowWeekChart(v=>!v)} className="rounded-full bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700">Неделя</Button>
+                          <Button onClick={()=>setShowMonthChart(v=>!v)} className="rounded-full bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700">Месяц</Button>
+                          <Button onClick={()=>setShowYearChart(v=>!v)} className="rounded-full bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700">Год</Button>
+                        </div>
+                        {showWeekChart && (
+                          <div className="h-56">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={seriesWeek}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#44403c"/>
+                                <XAxis dataKey="name" stroke="#a8a29e"/>
+                                <YAxis domain={[0,10]} stroke="#a8a29e"/>
+                                <Tooltip/>
+                                <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} dot={{r:3}}/>
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                        {showMonthChart && (
+                          <div className="h-56">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={seriesMonth}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#44403c"/>
+                                <XAxis dataKey="name" stroke="#a8a29e"/>
+                                <YAxis domain={[0,10]} stroke="#a8a29e"/>
+                                <Tooltip/>
+                                <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} dot={{r:2}}/>
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                        {showYearChart && (
+                          <div className="h-56">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={seriesYear}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#44403c"/>
+                                <XAxis dataKey="name" stroke="#a8a29e"/>
+                                <YAxis domain={[0,10]} stroke="#a8a29e"/>
+                                <Tooltip/>
+                                <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={3} dot={{r:4}}/>
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="space-y-6">
+                      <p className="text-stone-300 text-lg text-center">{questions[testStep]}</p>
+                      <div className="flex gap-2 flex-wrap justify-center">
+                        {[0,1,2,3,4,5,6,7,8,9,10].map(val=> (
+                          <Button key={val} onClick={()=>{
+                            const na=[...answers, val]; setAnswers(na);
+                            if(na.length < questions.length){ setTestStep(na.length); }
+                            else { const final=Math.round(na.reduce((a,b)=>a+b,0)/na.length); setWillpower(final);
+                              setStats(prev=> prev? { ...prev, yesterday: final, week: Math.round((prev.week+final)/2), month: Math.round((prev.month+final)/2), year: prev.year } : { yesterday: final, week: final, month: final, year: final });
+                              setShowTest(false);
+                            }
+                          }} className="bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700 w-10 h-10 p-0">{val}</Button>
+                        ))}
                       </div>
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Задачи на сегодня */}
+            {showWillpower && (
+              <section className="max-w-6xl mx-auto mt-8">
+                <h2 className="text-lg text-amber-400 mb-3">Задачи на сегодня</h2>
+                <Card>
+                  <CardContent className="pt-4 space-y-4">
+                    <TodayTaskAdder categories={balance.map(b=>b.title)} onAdd={addTask} />
+                    {/* Упрощённая версия списка — без DnD, чтобы быстрее запустить */}
+                    {todayTaskEntries.length===0 && (
+                      <div className="text-sm text-stone-500">На сегодня задач не найдено. Добавь их в категориях ниже.</div>
+                    )}
+                    <ul className="mt-1 space-y-2">
+                      {todayTaskEntries.map(({cat, task}, index)=> (
+                        <li key={task.id} className="flex flex-col gap-1 p-3 rounded-xl border border-stone-700 bg-stone-900/60">
+                          <div className="flex items-center gap-3">
+                            <input type="checkbox" checked={!!task.done} onChange={()=>toggleTask(cat, task.id)} className="accent-amber-500 h-4 w-4"/>
+                            <span className={task.done? 'line-through text-stone-500':'text-stone-200'}>{task.text}</span>
+                            <span className="ml-auto text-xs text-stone-400">{cat}</span>
+                            <button onClick={()=>removeTodayAt(index)} className="ml-2 text-stone-400 hover:text-amber-400" title="Удалить из Сегодня и категории">✕</button>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-stone-400">
+                            <span className={`px-2 py-0.5 rounded-full border ${task.difficulty==='easy'?'border-emerald-700 text-emerald-400': task.difficulty==='medium'?'border-amber-700 text-amber-400':'border-red-700 text-red-400'}`}>{task.difficulty==='easy'?'простая': task.difficulty==='medium'?'средняя':'тяжёлая'}</span>
+                            {task.due && <span>{new Date(task.due).toLocaleString()}</span>}
+                          </div>
+                          <div className="pt-1">
+                            <button onClick={()=>openTodayDue(index)} className="text-xs text-stone-400 hover:text-amber-400 underline underline-offset-2">Не сегодня</button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          </section>
-        )}
+              </section>
+            )}
 
-        <footer className="text-center mt-10 text-sm text-stone-500"><p>© Ковенант • v0 MVP Shell • лицензия MIT</p></footer>
+            {/* Цели по категориям (компактный список) */}
+            {showWillpower && (
+              <section className="max-w-6xl mx-auto mt-8">
+                <h2 className="text-lg text-amber-400 mb-3">Цели по категориям</h2>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {balance.map(area=> (
+                    <Card key={area.title}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base text-stone-200 flex items-center gap-2">
+                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-stone-800 border border-stone-700 text-amber-400 text-xs">{area.short}</span>
+                          {area.title}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-6">
+                          <div>
+                            <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Цели</div>
+                            <GoalAdder
+                              onAdd={(payload)=>addGoal(area.title, payload)}
+                              disabled={(goals[area.title]||[]).length >= 3}
+                              limit={3}
+                              count={(goals[area.title]||[]).length}
+                            />
+                            <ul className="mt-3 space-y-2">
+                              {(goals[area.title]||[]).map(goal=> (
+                                <li key={goal.id} className="flex items-center gap-3 p-2 rounded-xl border border-stone-700 bg-stone-900/60">
+                                  <input type="checkbox" checked={!!goal.done} onChange={()=>toggleGoal(area.title, goal.id)} className="accent-amber-500 h-4 w-4"/>
+                                  <span className={goal.done? 'line-through text-stone-500':'text-stone-200'}>{goal.title}</span>
+                                  <span className="ml-auto flex items-center gap-2 text-xs text-stone-400">
+                                    <span className="px-2 py-0.5 rounded-full border border-amber-700 text-amber-400">+{goal.increment}</span>
+                                    {goal.deadline && <span title="Назначено на">{new Date(goal.deadline).toLocaleString()}</span>}
+                                  </span>
+                                  <button onClick={()=>removeGoal(area.title, goal.id)} className="text-stone-400 hover:text-amber-400">✕</button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <div className="text-xs uppercase tracking-wider text-stone-500 mb-2">Задачи</div>
+                            <TaskAdder onAdd={(payload)=>addTask(area.title, payload)} />
+                            <ul className="mt-3 space-y-2">
+                              {(tasks[area.title]||[]).length===0 && (
+                                <li className="text-sm text-stone-500">Пока нет задач. Добавь первую.</li>
+                              )}
+                              {(tasks[area.title]||[]).map(task=> (
+                                <li key={task.id} className="p-2 rounded-xl border border-stone-700 bg-stone-900/60 space-y-2">
+                                  <div className="flex items-center gap-3">
+                                    <input type="checkbox" checked={!!task.done} onChange={()=>toggleTask(area.title, task.id)} className="accent-amber-500 h-4 w-4"/>
+                                    <span className={task.done? 'line-through text-stone-500':'text-stone-200'}>{task.text}</span>
+                                    {task.due && (
+                                      <span className="ml-auto text-xs text-stone-400" title="Назначено на">{new Date(task.due).toLocaleString()}</span>
+                                    )}
+                                    <button onClick={()=>removeTask(area.title, task.id)} className="ml-2 text-stone-400 hover:text-amber-400" title="Удалить задачу">
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-stone-400">
+                                    <span className={`px-2 py-0.5 rounded-full border ${task.difficulty==='easy'?'border-emerald-700 text-emerald-400': task.difficulty==='medium'?'border-amber-700 text-amber-400':'border-red-700 text-red-400'}`}>
+                                      {task.difficulty==='easy'?'простая': task.difficulty==='medium'?'средняя':'тяжёлая'}
+                                    </span>
+                                    {task.recur && task.recur!=='none' && (
+                                      <span className="px-2 py-0.5 rounded-full border border-stone-700 text-stone-300">повтор: {RECUR_OPTIONS.find(r=>r.key===task.recur)?.label || task.recur}</span>
+                                    )}
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {/* Modal: set date for Today task */}
-        {todayDueEdit.open && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center z-50">
-            <div className="w-full max-w-md rounded-2xl border border-stone-700 bg-stone-900 p-4">
-              <div className="text-sm text-stone-300 mb-3">Выбери дату и время для задачи</div>
-              <input autoFocus type="datetime-local" value={todayDueEdit.value || ''} onChange={e=>setTodayDueEdit(v=>({...v, value:e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 focus:outline-none focus:border-amber-500"/>
-              <div className="flex justify-end gap-2 mt-4">
-                <button onClick={postponeToday} className="px-3 py-2 rounded-xl border border-stone-700 text-stone-300 hover:bg-stone-800">Установить позже</button>
-                <Button onClick={commitTodayDue} className="rounded-xl bg-amber-600 hover:bg-amber-500 text-black font-semibold px-4">Установить дату</Button>
-              </div>
-            </div>
+            <footer className="text-center mt-10 text-sm text-stone-500"><p>© Ковенант • v0 MVP Shell • лицензия MIT</p></footer>
+          </>
+        ) : (
+          <div className="py-24 text-center text-stone-500 space-y-3">
+            <p className="text-lg text-stone-300">Раздел в разработке.</p>
+            <p className="text-sm">Здесь появится личный профиль и статистика пользователя.</p>
           </div>
         )}
-
       </main>
+      <BottomTabBar activeTab={activeTab} onChange={setActiveTab} />
+
+      {/* Modal: set date for Today task */}
+      {todayDueEdit.open && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm grid place-items-center z-50">
+          <div className="w-full max-w-md rounded-2xl border border-stone-700 bg-stone-900 p-4">
+            <div className="text-sm text-stone-300 mb-3">Выбери дату и время для задачи</div>
+            <input autoFocus type="datetime-local" value={todayDueEdit.value || ''} onChange={e=>setTodayDueEdit(v=>({...v, value:e.target.value}))} className="w-full px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 focus:outline-none focus:border-amber-500"/>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={postponeToday} className="px-3 py-2 rounded-xl border border-stone-700 text-stone-300 hover:bg-stone-800">Установить позже</button>
+              <Button onClick={commitTodayDue} className="rounded-xl bg-amber-600 hover:bg-amber-500 text-black font-semibold px-4">Установить дату</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
