@@ -268,13 +268,13 @@ function TaskAdder({ onAdd }){
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-stone-400 w-24">Назначить на</label>
-          <input type="datetime-local" value={due} onChange={e=>setDue(e.target.value)} className="flex-1 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 focus:outline-none focus:border-amber-500"/>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="text-xs text-stone-400 sm:w-24">Назначить на</label>
+          <input type="datetime-local" value={due} onChange={e=>setDue(e.target.value)} className="w-full min-w-0 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 focus:outline-none focus:border-amber-500 sm:flex-1"/>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-stone-400 w-24">Повтор</label>
-          <select value={recur} onChange={e=>setRecur(e.target.value)} className="flex-1 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="text-xs text-stone-400 sm:w-24">Повтор</label>
+          <select value={recur} onChange={e=>setRecur(e.target.value)} className="w-full min-w-0 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 sm:flex-1">
             {RECUR_OPTIONS.map(o=> <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
         </div>
@@ -318,9 +318,9 @@ function TodayTaskAdder({ categories, onAdd }){
       <div className="text-xs uppercase tracking-wider text-stone-400 mb-3">Новая задача на сегодня</div>
       <div className="grid grid-cols-1 gap-4">
         <input value={val} onChange={e=>setVal(e.target.value)} placeholder="Что нужно сделать?" className="w-full px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 placeholder-stone-500 focus:outline-none focus:border-amber-500"/>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-400 whitespace-nowrap">Категория</span>
-          <select value={cat} onChange={e=>setCat(e.target.value)} className="flex-1 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <span className="text-xs text-stone-400 whitespace-nowrap sm:w-28">Категория</span>
+          <select value={cat} onChange={e=>setCat(e.target.value)} className="w-full min-w-0 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 sm:flex-1">
             {categories.map(c=> <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
@@ -347,13 +347,13 @@ function TodayTaskAdder({ categories, onAdd }){
             })}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-400 whitespace-nowrap">Время</span>
-          <input type="datetime-local" value={due} onChange={e=>setDue(e.target.value)} className="flex-1 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 focus:outline-none focus:border-amber-500"/>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <span className="text-xs text-stone-400 whitespace-nowrap sm:w-28">Время</span>
+          <input type="datetime-local" value={due} onChange={e=>setDue(e.target.value)} className="w-full min-w-0 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 focus:outline-none focus:border-amber-500 sm:flex-1"/>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-400 whitespace-nowrap">Повтор</span>
-          <select value={recur} onChange={e=>setRecur(e.target.value)} className="flex-1 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <span className="text-xs text-stone-400 whitespace-nowrap sm:w-28">Повтор</span>
+          <select value={recur} onChange={e=>setRecur(e.target.value)} className="w-full min-w-0 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 sm:flex-1">
             {RECUR_OPTIONS.map(o=> <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
         </div>
