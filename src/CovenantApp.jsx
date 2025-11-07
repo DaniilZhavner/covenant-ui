@@ -433,65 +433,66 @@ function MobileTodayPage({
       <section>
         <h2 className="text-lg text-amber-400 mb-3">Задачи на сегодня</h2>
         <div className="p-4">
-        <div className="rounded-2xl bg-stone-950/40 p-4">
-          <TodayTaskAdder categories={categories} onAdd={onAddTodayTask} />
-        </div>
-        {todayTaskEntries.length === 0 ? (
-          <p className="mt-4 text-sm text-stone-500">На сегодня задач пока нет. Добавь первую.</p>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {todayTaskEntries.map(({ cat, task }, index) => (
-              <li
-                key={task.id}
-                className="rounded-2xl border border-stone-700 bg-stone-900/70 p-4 space-y-2"
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={!!task.done}
-                    onChange={() => onToggleTask(cat, task.id)}
-                    className="accent-amber-500 h-4 w-4"
-                  />
-                  <span className={task.done ? "line-through text-stone-500" : "text-stone-100"}>{task.text}</span>
-                  <span className="ml-auto text-xs text-stone-400">{cat}</span>
-                  <button
-                    onClick={() => onRemoveToday(index)}
-                    className="ml-2 text-stone-400 hover:text-amber-400"
-                    title="Удалить из Сегодня"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-stone-400">
-                  <span
-                    className={`px-2 py-0.5 rounded-full border ${
-                      task.difficulty === 'easy'
-                        ? 'border-emerald-700 text-emerald-400'
+          <div className="rounded-2xl bg-stone-950/40 p-4">
+            <TodayTaskAdder categories={categories} onAdd={onAddTodayTask} />
+          </div>
+          {todayTaskEntries.length === 0 ? (
+            <p className="mt-4 text-sm text-stone-500">На сегодня задач пока нет. Добавь первую.</p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {todayTaskEntries.map(({ cat, task }, index) => (
+                <li
+                  key={task.id}
+                  className="rounded-2xl border border-stone-700 bg-stone-900/70 p-4 space-y-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={!!task.done}
+                      onChange={() => onToggleTask(cat, task.id)}
+                      className="accent-amber-500 h-4 w-4"
+                    />
+                    <span className={task.done ? "line-through text-stone-500" : "text-stone-100"}>{task.text}</span>
+                    <span className="ml-auto text-xs text-stone-400">{cat}</span>
+                    <button
+                      onClick={() => onRemoveToday(index)}
+                      className="ml-2 text-stone-400 hover:text-amber-400"
+                      title="Удалить из Сегодня"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-stone-400">
+                    <span
+                      className={`px-2 py-0.5 rounded-full border ${
+                        task.difficulty === 'easy'
+                          ? 'border-emerald-700 text-emerald-400'
+                          : task.difficulty === 'medium'
+                          ? 'border-amber-700 text-amber-400'
+                          : 'border-red-700 text-red-400'
+                      }`}
+                    >
+                      {task.difficulty === 'easy'
+                        ? 'простая'
                         : task.difficulty === 'medium'
-                        ? 'border-amber-700 text-amber-400'
-                        : 'border-red-700 text-red-400'
-                    }`}
-                  >
-                    {task.difficulty === 'easy'
-                      ? 'простая'
-                      : task.difficulty === 'medium'
-                      ? 'средняя'
-                      : 'тяжёлая'}
-                  </span>
-                  {task.due && <span>{new Date(task.due).toLocaleString()}</span>}
-                </div>
-                <div>
-                  <button
-                    onClick={() => onEditDue(index)}
-                    className="text-xs text-stone-400 hover:text-amber-400 underline underline-offset-2"
-                  >
-                    Не сегодня
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+                        ? 'средняя'
+                        : 'тяжёлая'}
+                    </span>
+                    {task.due && <span>{new Date(task.due).toLocaleString()}</span>}
+                  </div>
+                  <div>
+                    <button
+                      onClick={() => onEditDue(index)}
+                      className="text-xs text-stone-400 hover:text-amber-400 underline underline-offset-2"
+                    >
+                      Не сегодня
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
     </div>
   );
@@ -614,7 +615,18 @@ export default function CovenantApp() {
   }, [dark]);
   const [balance, setBalance] = useState(defaultBalance);
   const [locked, setLocked] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const tabKeys = ['overview', 'today', 'profile'];
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === 'undefined') return 'overview';
+    const stored = window.localStorage.getItem('covenant-active-tab');
+    return tabKeys.includes(stored) ? stored : 'overview';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('covenant-active-tab', activeTab);
+    }
+  }, [activeTab]);
 
   // Runtime checks (микро-тесты)
   useEffect(() => {
