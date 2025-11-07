@@ -308,8 +308,12 @@ function TodayTaskAdder({ categories, onAdd }){
 
   if(!open) return (
     <div className="flex items-center justify-between gap-3">
-      <button onClick={()=>setOpen(true)} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-200 hover:bg-stone-700"><Plus className="h-4 w-4"/> Новая задача на сегодня</button>
-      <span className="text-xs text-stone-500">Быстрый ввод задачи на сегодня</span>
+      <button
+        onClick={()=>setOpen(true)}
+        className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-stone-800 text-stone-200 hover:bg-stone-700 whitespace-nowrap"
+      >
+        <Plus className="h-4 w-4"/> Добавить задачу
+      </button>
     </div>
   );
 
@@ -428,7 +432,7 @@ function MobileTodayPage({
 
       <section>
         <h2 className="text-lg text-amber-400 mb-3">Задачи на сегодня</h2>
-        <div className="rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
+        <div className="p-4">
           <TodayTaskAdder categories={categories} onAdd={onAddTodayTask} />
         </div>
         {todayTaskEntries.length === 0 ? (
