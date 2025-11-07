@@ -2,3 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+.theme-dark {
+  color-scheme: dark;
+}
+
+.theme-light {
+  color-scheme: light;
+}
+
+.theme-light .text-stone-200 {
+  color: #1f2937 !important;
+}
+
+.theme-light .text-stone-300 {
+  color: #374151 !important;
+}
+
+.theme-light .text-stone-400 {
+  color: #4b5563 !important;
+}
+
+.theme-light .text-stone-500 {
+  color: #6b7280 !important;
+}
+
+.theme-light .text-stone-600 {
+  color: #78716c !important;
+}
+
+.theme-light .border-stone-600,
+.theme-light .border-stone-700,
+.theme-light .border-stone-800 {
+  border-color: rgba(148, 163, 184, 0.35) !important;
+}
+
+.theme-light .bg-stone-900,
+.theme-light .bg-stone-900\/60,
+.theme-light .bg-stone-900\/70,
+.theme-light .bg-stone-950\/40 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.theme-light .bg-stone-800,
+.theme-light .bg-stone-700,
+.theme-light .bg-black,
+.theme-light .bg-black\/60,
+.theme-light .bg-black\/85 {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.theme-light .bg-black\/70 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
