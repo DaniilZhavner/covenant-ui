@@ -603,6 +603,10 @@ function toLocalInput(dt){const d=new Date(dt||Date.now());const pad=n=>String(n
 
 export default function CovenantApp() {
   const [dark, setDark] = useState(true);
+
+  useEffect(() => {
+    document.documentElement.style.colorScheme = dark ? "dark" : "light";
+  }, [dark]);
   const [balance, setBalance] = useState(defaultBalance);
   const [locked, setLocked] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -836,8 +840,12 @@ export default function CovenantApp() {
   // Expanded category state
   const [expanded, setExpanded] = useState(null); // area.title | null
 
+  const themeClass = dark
+    ? "theme-dark bg-gradient-to-b from-stone-950 via-stone-900 to-black text-stone-200"
+    : "theme-light bg-gradient-to-b from-amber-50 via-amber-100 to-white text-stone-900";
+
   return (
-    <div className={`min-h-screen w-full bg-gradient-to-b from-stone-950 via-stone-900 to-black text-stone-200 font-serif ${dark? 'dark': ''}`}>
+    <div className={`min-h-screen w-full font-serif ${themeClass}`}>
       <motion.header initial={{opacity:0,y:-12}} animate={{opacity:1,y:0}} className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-2xl grid place-items-center bg-stone-800 text-amber-400 border border-stone-600"><ShieldCheck className="h-5 w-5"/></div>
