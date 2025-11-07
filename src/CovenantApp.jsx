@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Rocket, Flame, Plus, Trash2, Maximize2, CheckCircle2, Target, X, Home, CalendarCheck, User, LogOut } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { apiRequest } from "./lib/api.js";
 
 
 /**
@@ -68,6 +69,8 @@ const defaultBalance = [
   { title: "Социальная жизнь", short: "С", value: 55 },
   { title: "Довольство насыщенностью жизнью", short: "Д", value: 60 },
 ];
+
+const FALLBACK_CATEGORY = "Без категории";
 
 // ===================== TASKS / GOALS HELPERS =====================
 function makeId() {
@@ -607,15 +610,12 @@ function GoalAdder({ onAdd, disabled=false, limit=3, count=0 }){
 function isSameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
 function toLocalInput(dt){const d=new Date(dt||Date.now());const pad=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 
-export default function CovenantApp({ user, onSignOut }) {
+export default function CovenantApp({ user, token, onSignOut }) {
   const [dark, setDark] = useState(true);
   const userName = user?.name ?? "Участник Ковенанта";
   const userEmail = user?.email ?? null;
-
-  useEffect(() => {
-    document.documentElement.style.colorScheme = dark ? "dark" : "light";
-  }, [dark]);
-  const [balance, setBalance] = useState(defaultBalance);
+  const [balance, setBalance] = useState(defaultBalance.map((item) => ({ ...item })));
+  const [balanceHydrated, setBalanceHydrated] = useState(false);
   const [locked, setLocked] = useState(false);
   const tabKeys = ['overview', 'today', 'profile'];
   const [activeTab, setActiveTab] = useState(() => {
@@ -623,6 +623,78 @@ export default function CovenantApp({ user, onSignOut }) {
     const stored = window.localStorage.getItem('covenant-active-tab');
     return tabKeys.includes(stored) ? stored : 'overview';
   });
+
+  useEffect(() => {
+    document.documentElement.style.colorScheme = dark ? "dark" : "light";
+  }, [dark]);
+  useEffect(() => {
+    if (!token || !balanceHydrated) return;
+    const timer = setTimeout(() => {
+      const payload = balance.map((seg, index) => ({
+        id: seg.id,
+        title: seg.title,
+        short: seg.short,
+        value: seg.value,
+        position: index,
+      }));
+      apiRequest(token, "/api/balance", { method: "PUT", body: { segments: payload } }).catch((error) => {
+        console.error("Failed to persist balance", error);
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [balance, token, balanceHydrated]);
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    const loadAll = async () => {
+      try {
+        const [balanceRes, tasksRes, goalsRes] = await Promise.all([
+          apiRequest(token, "/api/balance"),
+          apiRequest(token, "/api/tasks"),
+          apiRequest(token, "/api/goals"),
+        ]);
+        if (cancelled) return;
+        const segments = Array.isArray(balanceRes?.segments) && balanceRes.segments.length > 0
+          ? balanceRes.segments.map((seg) => ({ id: seg.id, title: seg.title, short: seg.short, value: seg.value ?? 0 }))
+          : defaultBalance.map((item) => ({ ...item }));
+        setBalance(segments);
+        setBalanceHydrated(true);
+
+        const ensureKey = (map, key) => {
+          if (!map[key]) map[key] = [];
+        };
+
+        const categories = segments.map((seg) => seg.title);
+        const tasksMap = {};
+        categories.forEach((cat) => ensureKey(tasksMap, cat));
+        if (Array.isArray(tasksRes?.tasks)) {
+          tasksRes.tasks.forEach((task) => {
+            const cat = task.category || FALLBACK_CATEGORY;
+            ensureKey(tasksMap, cat);
+            tasksMap[cat].push(task);
+          });
+        }
+        setTasks(tasksMap);
+
+        const goalsMap = {};
+        categories.forEach((cat) => ensureKey(goalsMap, cat));
+        if (Array.isArray(goalsRes?.goals)) {
+          goalsRes.goals.forEach((goal) => {
+            const cat = goal.category || FALLBACK_CATEGORY;
+            ensureKey(goalsMap, cat);
+            goalsMap[cat].push(goal);
+          });
+        }
+        setGoals(goalsMap);
+      } catch (error) {
+        console.error("Failed to load data", error);
+      }
+    };
+    loadAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -720,81 +792,168 @@ export default function CovenantApp({ user, onSignOut }) {
   const [seriesMonth, setSeriesMonth] = useState([]);
   const [seriesYear, setSeriesYear] = useState([]);
 
-  // tasks per category (seed with 5 random tasks each)
-  const [tasks, setTasks] = useState(()=>{
-    const now=new Date(); const inHours=(h)=> new Date(now.getTime()+h*3600_000).toISOString();
-    const examples = [
-      { text: "Сделать короткую запись в дневник", difficulty: 'easy' },
-      { text: "Закрыть важный рабочий таск", difficulty: 'medium' },
-      { text: "Тренировка с нагрузкой", difficulty: 'hard' },
-      { text: "Позвонить другу", difficulty: 'easy' },
-      { text: "Чтение 30 минут", difficulty: 'medium' },
-      { text: "Разобрать почту", difficulty: 'easy' },
-      { text: "Написать эссе/заметку", difficulty: 'hard' },
-      { text: "Медитация 15 минут", difficulty: 'easy' },
-      { text: "Подготовить презентацию", difficulty: 'hard' },
-      { text: "Прогулка 40 минут", difficulty: 'medium' },
-    ];
-    const pickRandomTasks=()=>{ const shuffled=[...examples].sort(()=>0.5-Math.random()); return shuffled.slice(0,5).map((ex,i)=>({ id:makeId(), text:ex.text, done:false, difficulty:ex.difficulty, due: inHours((i+1)*Math.floor(Math.random()*12+1)) })); };
-    const init={}; defaultBalance.forEach(b=>{ init[b.title]=pickRandomTasks(); }); return init; });
+  // tasks per category
+  const [tasks, setTasks] = useState({});
 
   // goals per category
-  const [goals, setGoals] = useState(()=>{ const init={}; defaultBalance.forEach(b=>{ init[b.title]=[]; }); return init; });
+  const [goals, setGoals] = useState({});
 
-  const addTask = (cat, payload) => {
-    const t = payload.text.trim();
-    if(!t) return;
-    let parsedDue;
-    if(payload.due){
+  const addTask = async (cat, payload) => {
+    if (!token) return;
+    const text = payload.text?.trim();
+    if (!text) return;
+    let dueIso = null;
+    if (payload.due) {
       const dateCandidate = new Date(payload.due);
-      parsedDue = isNaN(dateCandidate.getTime()) ? undefined : dateCandidate.toISOString();
+      dueIso = Number.isNaN(dateCandidate.getTime()) ? null : dateCandidate.toISOString();
     }
-    const newTask={ id:makeId(), text:t, done:false, difficulty:payload.difficulty, due: parsedDue, recur: payload.recur || 'none' };
-    setTasks(prev=>({ ...prev, [cat]: [...(prev[cat]||[]), newTask] }));
-  };
-
-  const toggleTask = (cat, id) => {
-    setTasks(prev=>({ ...prev, [cat]: (prev[cat]||[]).map(it=> {
-      if(it.id!==id) return it;
-      if(!it.done && it.recur && it.recur!=='none' && it.due){
-        const next = nextOccurrenceISO(it.due, it.recur);
-        return { ...it, done:false, due: next || it.due };
+    try {
+      const data = await apiRequest(token, "/api/tasks", {
+        method: "POST",
+        body: {
+          category: cat,
+          text,
+          difficulty: payload.difficulty || "medium",
+          due: dueIso,
+          recur: payload.recur || "none",
+        },
+      });
+      if (data?.task) {
+        const categoryKey = data.task.category || cat || FALLBACK_CATEGORY;
+        setTasks((prev) => {
+          const next = { ...prev };
+          next[categoryKey] = [...(next[categoryKey] || []), data.task];
+          return next;
+        });
       }
-      return { ...it, done: !it.done };
-    }) }));
+    } catch (error) {
+      console.error("Failed to add task", error);
+    }
   };
 
-  const removeTask = (cat, id) => {
-    setTasks(prev=>({ ...prev, [cat]: (prev[cat]||[]).filter(it=> it.id!==id ) }));
+  const toggleTask = async (cat, id) => {
+    if (!token) return;
+    try {
+      const data = await apiRequest(token, `/api/tasks/${id}/toggle`, { method: "POST" });
+      if (data?.task) {
+        const updatedTask = data.task;
+        setTasks((prev) => {
+          const next = { ...prev };
+          let found = false;
+          Object.keys(next).forEach((key) => {
+            next[key] = next[key].map((item) => {
+              if (item.id === updatedTask.id) {
+                found = true;
+                return updatedTask;
+              }
+              return item;
+            });
+          });
+          if (!found) {
+            const categoryKey = updatedTask.category || cat || FALLBACK_CATEGORY;
+            next[categoryKey] = [...(next[categoryKey] || []), updatedTask];
+          }
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to toggle task", error);
+    }
   };
 
-  const addGoal = (cat, payload)=>{
-    setGoals(prev=>{
-      const current = prev[cat] || [];
-      if(current.length >= 3) return prev;
-      return ({...prev, [cat]: [...current, payload] });
-    });
+  const removeTask = async (_cat, id) => {
+    if (!token) return;
+    try {
+      await apiRequest(token, `/api/tasks/${id}`, { method: "DELETE" });
+      setTasks((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((key) => {
+          next[key] = next[key].filter((task) => task.id !== id);
+        });
+        return next;
+      });
+    } catch (error) {
+      console.error("Failed to remove task", error);
+    }
   };
 
-  const toggleGoal = (cat, id) => {
-    setGoals(prev=> ({
-      ...prev,
-      [cat]: (prev[cat]||[]).map(g=>{
-        if(g.id!==id) return g;
-        if(!g.done){
-          setBalance(bal=>{
-            const idx = bal.findIndex(x=>x.title===cat); if(idx<0) return bal;
-            const next=[...bal];
-            next[idx] = { ...next[idx], value: Math.max(0, Math.min(100, next[idx].value + (g.increment||0))) };
+  const addGoal = async (cat, payload) => {
+    if (!token) return;
+    if ((goals[cat] || []).length >= 3) return;
+    let deadlineIso = null;
+    if (payload.deadline) {
+      const dateCandidate = new Date(payload.deadline);
+      deadlineIso = Number.isNaN(dateCandidate.getTime()) ? null : dateCandidate.toISOString();
+    }
+    try {
+      const data = await apiRequest(token, "/api/goals", {
+        method: "POST",
+        body: {
+          category: cat,
+          title: payload.title,
+          increment: payload.increment,
+          deadline: deadlineIso,
+        },
+      });
+      if (data?.goal) {
+        const categoryKey = data.goal.category || cat || FALLBACK_CATEGORY;
+        setGoals((prev) => {
+          const next = { ...prev };
+          const current = next[categoryKey] || [];
+          if (current.length >= 3) return next;
+          next[categoryKey] = [...current, data.goal];
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to add goal", error);
+    }
+  };
+
+  const toggleGoal = async (cat, id) => {
+    if (!token) return;
+    try {
+      const data = await apiRequest(token, `/api/goals/${id}/toggle`, { method: "POST" });
+      if (data?.goal) {
+        const goal = data.goal;
+        const categoryKey = goal.category || cat || FALLBACK_CATEGORY;
+        setGoals((prev) => ({
+          ...prev,
+          [categoryKey]: (prev[categoryKey] || []).map((g) => (g.id === goal.id ? goal : g)),
+        }));
+        if (data.applied) {
+          setBalance((bal) => {
+            const idx = bal.findIndex((x) => x.title === categoryKey);
+            if (idx < 0) return bal;
+            const next = [...bal];
+            next[idx] = {
+              ...next[idx],
+              value: Math.max(0, Math.min(100, next[idx].value + (goal.increment || 0))),
+            };
             return next;
           });
         }
-        return { ...g, done: !g.done };
-      })
-    }));
+      }
+    } catch (error) {
+      console.error("Failed to toggle goal", error);
+    }
   };
 
-  const removeGoal = (cat, id)=>{ setGoals(prev=> ({ ...prev, [cat]: (prev[cat]||[]).filter(g=>g.id!==id) })); };
+  const removeGoal = async (_cat, id) => {
+    if (!token) return;
+    try {
+      await apiRequest(token, `/api/goals/${id}`, { method: "DELETE" });
+      setGoals((prev) => {
+        const next = { ...prev };
+        Object.keys(next).forEach((key) => {
+          next[key] = next[key].filter((goal) => goal.id !== id);
+        });
+        return next;
+      });
+    } catch (error) {
+      console.error("Failed to remove goal", error);
+    }
+  };
 
   // Derived: tasks for today (willpower-driven)
   const [todayTaskEntries, setTodayTaskEntries] = useState([]);
@@ -806,11 +965,14 @@ export default function CovenantApp({ user, onSignOut }) {
   },[tasks, willpower]);
 
   // Remove from Today + from category too
-  const removeTodayAt = (index)=>{
-    setTodayTaskEntries(prev=>{
-      const entry = prev[index]; if(!entry) return prev;
-      setTasks(old=> ({...old, [entry.cat]: (old[entry.cat]||[]).filter(t=> t.id!==entry.task.id)}));
-      const cp=[...prev]; cp.splice(index,1); return cp;
+  const removeTodayAt = (index) => {
+    const entry = todayTaskEntries[index];
+    if (!entry) return;
+    removeTask(entry.cat, entry.task.id);
+    setTodayTaskEntries((prev) => {
+      const cp = [...prev];
+      cp.splice(index, 1);
+      return cp;
     });
   };
 
@@ -837,14 +999,54 @@ export default function CovenantApp({ user, onSignOut }) {
   const [todayDueEdit, setTodayDueEdit] = useState({ open:false, index:null, cat:null, id:null, value:"" });
   const openTodayDue = (index)=>{ const entry=todayTaskEntries[index]; if(!entry) return; setTodayDueEdit({ open:true, index, cat:entry.cat, id:entry.task.id, value: toLocalInput(entry.task.due) }); };
   const cancelTodayDue = ()=> setTodayDueEdit({ open:false, index:null, cat:null, id:null, value:"" });
-  const commitTodayDue = ()=>{
-    if(!todayDueEdit.open) return; const iso = todayDueEdit.value? new Date(todayDueEdit.value).toISOString() : undefined;
-    setTasks(prev=> ({...prev, [todayDueEdit.cat]: (prev[todayDueEdit.cat]||[]).map(t=> t.id===todayDueEdit.id? { ...t, due: iso } : t)}));
-    setTodayTaskEntries(prev=>{
-      const cp=[...prev]; const e=cp[todayDueEdit.index]; if(!e) return prev; const updated={...e, task:{...e.task, due: iso}}; cp[todayDueEdit.index]=updated;
-      const now=new Date(); if(iso && !isSameDay(new Date(iso), now)) { cp.splice(todayDueEdit.index,1); }
-      return cp;
-    });
+  const commitTodayDue = async () => {
+    if (!todayDueEdit.open || !token) return;
+    let iso = null;
+    if (todayDueEdit.value) {
+      const candidate = new Date(todayDueEdit.value);
+      iso = Number.isNaN(candidate.getTime()) ? null : candidate.toISOString();
+    }
+    try {
+      const data = await apiRequest(token, `/api/tasks/${todayDueEdit.id}`, {
+        method: "PATCH",
+        body: { due: iso },
+      });
+      if (data?.task) {
+        const updatedTask = data.task;
+        setTasks((prev) => {
+          const next = { ...prev };
+          let found = false;
+          Object.keys(next).forEach((key) => {
+            next[key] = next[key].map((task) => {
+              if (task.id === updatedTask.id) {
+                found = true;
+                return updatedTask;
+              }
+              return task;
+            });
+          });
+          if (!found) {
+            const categoryKey = updatedTask.category || todayDueEdit.cat || FALLBACK_CATEGORY;
+            next[categoryKey] = [...(next[categoryKey] || []), updatedTask];
+          }
+          return next;
+        });
+        setTodayTaskEntries((prev) => {
+          const cp = [...prev];
+          const existing = cp[todayDueEdit.index];
+          if (!existing) return prev;
+          const updatedEntry = { ...existing, task: { ...existing.task, due: updatedTask.due } };
+          cp[todayDueEdit.index] = updatedEntry;
+          const dueValue = updatedTask.due ? new Date(updatedTask.due) : null;
+          if (dueValue && !isSameDay(dueValue, new Date())) {
+            cp.splice(todayDueEdit.index, 1);
+          }
+          return cp;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update task", error);
+    }
     cancelTodayDue();
   };
 
