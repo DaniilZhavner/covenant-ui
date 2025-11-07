@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ShieldCheck, Sparkles, Rocket, Flame, Plus, Trash2, Maximize2, CheckCircle2, Target, X, Home, CalendarCheck, User } from "lucide-react";
+import { Rocket, Flame, Plus, Trash2, Maximize2, CheckCircle2, Target, X, Home, CalendarCheck, User } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 
@@ -847,16 +847,11 @@ export default function CovenantApp() {
   return (
     <div className={`min-h-screen w-full font-serif ${themeClass}`}>
       <motion.header initial={{opacity:0,y:-12}} animate={{opacity:1,y:0}} className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl grid place-items-center bg-stone-800 text-amber-400 border border-stone-600"><ShieldCheck className="h-5 w-5"/></div>
-          <div>
-            <h1 className="text-xl font-bold tracking-wide text-amber-400 drop-shadow">Ковенант</h1>
-            <p className="text-xs text-stone-400 italic">v0 • внутренняя версия</p>
-          </div>
+        <div>
+          <h1 className="text-xl font-bold tracking-wide text-amber-400 drop-shadow">Ковенант</h1>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-stone-400"><span>Тьма</span><Switch checked={dark} onCheckedChange={setDark}/></div>
-          <Button className="rounded-2xl bg-stone-800 border border-stone-700 text-amber-400 hover:bg-stone-700" ><Sparkles className="h-4 w-4"/>Моментум</Button>
         </div>
       </motion.header>
 
